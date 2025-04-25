@@ -181,6 +181,32 @@ public class DayVisitorAgent : MonoBehaviour
             }
         }
     }
+    public void GoToExitImmediately()
+    {
+        if (currentState == State.Exit) return; // 如果已经在退出，就不要重复设置
+
+        Debug.Log("[Visitor] 被强制召回，直接去出口！");
+
+        StopAllCoroutines(); // 停止原有状态机
+        currentState = State.Exit;
+
+        if (exitPoint != null)
+        {
+            agent.isStopped = false;
+            agent.SetDestination(exitPoint.position);
+            animatorController?.SetWalking(true);
+        }
+
+        StartCoroutine(ExitBehavior()); // 单独跑离开逻辑
+    }
+    IEnumerator ExitBehavior()
+    {
+        yield return new WaitUntil(() =>
+            !agent.pathPending && agent.remainingDistance <= stopDistance);
+
+        animatorController?.SetWalking(false);
+        Destroy(gameObject);
+    }
 
 
 

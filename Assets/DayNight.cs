@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class DayNightController : MonoBehaviour
 {
@@ -12,41 +12,107 @@ public class DayNightController : MonoBehaviour
     public float minExposure = 0.26f;
     public float maxExposure = 1f;
 
+    [Header("Time Control")]
     [Range(0, 1)]
     public float timeValue = 0f;
+    public float cycleSpeed = 0.01f;
+
+    [Header("Day/Night Range")]
+    [Range(0f, 1f)] public float dayStart = 0.15f;
+    [Range(0f, 1f)] public float dayEnd = 0.85f;
+
+    private bool isDay = false;
+    private bool wasDay = false;
+
+    [Header("System References")]
+    public VisitorManager visitorManager;
+    public NightModeManager nightModeManager;
+
+    [Header("Switch")]
+    public bool isPaused = true;
+
+    void Awake()
+    {
+        timeValue = dayStart - 0.005f; // å¯åŠ¨æ—¶è®¾ç½®ç•¥ä½äºç™½å¤©èµ·ç‚¹
+    }
 
     void Update()
     {
+        // æ—¶é—´æ¨è¿›ï¼ˆå¦‚æœªæš‚åœï¼‰
+        if (!isPaused)
+        {
+            timeValue += Time.deltaTime * cycleSpeed;
+
+            // âœ… æ—¶é—´åˆ°è¾¾1åé‡ç½®ä¸º0ï¼Œå®ç°å¾ªç¯
+            if (timeValue > 1f)
+                timeValue = 0f;
+        }
+
+        // â˜€ï¸ æ›´æ–°å¤ªé˜³å…‰ç…§å¼ºåº¦å’Œè§’åº¦
         if (directionalLight != null)
         {
-            // ¹âÇ¿²åÖµ
             float intensity = Mathf.Lerp(minIntensity, maxIntensity, GetDayCurveValue(timeValue));
             directionalLight.intensity = intensity;
 
-            // Ì«Ñô¹ì¼££¨·½Î»+Ñö½Ç£©
-            float sunAngleY = Mathf.Lerp(90f, 350f, timeValue); // 90(¶«) ¡ú 450(ÔÙ»Ø¶«)
-            float sunAngleX = GetSunElevationAngle(timeValue);  // Ñö½Ç±ä»¯£¨ÔçÍíµÍ¡¢ÖĞÎç¸ß£©
+            float sunAngleY = Mathf.Lerp(90f, 450f, timeValue); // æ°´å¹³æ–¹å‘æ—‹è½¬
+            float sunAngleX = GetSunElevationAngle(timeValue);  // é«˜åº¦è§’
             directionalLight.transform.rotation = Quaternion.Euler(sunAngleX, sunAngleY, 0f);
         }
 
+        // æ›´æ–°å¤©ç©ºç›’æ›å…‰åº¦
         if (skyboxMaterial != null)
         {
-            // SkyboxÆØ¹â²åÖµ
             float exposure = Mathf.Lerp(minExposure, maxExposure, GetDayCurveValue(timeValue));
             skyboxMaterial.SetFloat("_Exposure", exposure);
         }
+
+        // ğŸŒğŸŒ™ ç™½å¤©å¤œæ™šçŠ¶æ€åˆ¤æ–­åˆ‡æ¢
+        wasDay = isDay;
+        isDay = (timeValue >= dayStart && timeValue <= dayEnd);
+
+        if (isDay != wasDay)
+        {
+            if (isDay)
+            {
+                Debug.Log("[DayNight] è¿›å…¥ç™½å¤©");
+                visitorManager?.StartDay();
+                ClearAllGhosts();
+            }
+            else
+            {
+                Debug.Log("[DayNight] è¿›å…¥å¤œæ™š");
+                visitorManager?.EndDay();
+                nightModeManager?.StartNight();
+            }
+        }
     }
 
-    // Ñö½ÇËæÊ±¼ä±ä»¯ÇúÏß
+    void ClearAllGhosts()
+    {
+        GameObject[] ghosts = GameObject.FindGameObjectsWithTag("Ghost");
+        Debug.Log($"[DayNight] æ¸…é™¤å¹½çµæ•°é‡ï¼š{ghosts.Length}");
+
+        foreach (GameObject ghost in ghosts)
+        {
+            GhostController controller = ghost.GetComponent<GhostController>();
+            if (controller != null)
+            {
+                controller.TriggerVanish();
+            }
+            else
+            {
+                Destroy(ghost);
+            }
+        }
+    }
+
     float GetSunElevationAngle(float t)
     {
-        // ´Ó -10¡ã (ÀèÃ÷) ¡ú 90¡ã (ÕıÎç) ¡ú -10¡ã (°øÍí)
-        return Mathf.Lerp(-3f, 75f, Mathf.Sin(t * Mathf.PI));
+        return Mathf.Lerp(-3f, 75f, Mathf.Sin(t * Mathf.PI)); // æ¨¡æ‹Ÿå¤ªé˜³é«˜åº¦
     }
 
-    // ¹âÇ¿/ÆØ¹â±ä»¯ÇúÏß (0¡ú1¡ú0)
     float GetDayCurveValue(float t)
     {
-        return Mathf.Clamp01(Mathf.Sin(t * Mathf.PI));
+        return Mathf.Clamp01(Mathf.Sin(t * Mathf.PI)); // ç”¨æ­£å¼¦æ¨¡æ‹Ÿä¸€å¤©å¼ºåº¦å˜åŒ–
     }
 }

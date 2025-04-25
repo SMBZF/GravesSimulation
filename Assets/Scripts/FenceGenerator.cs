@@ -19,23 +19,69 @@ public class GraveyardGenerator : MonoBehaviour
     public int selectedFenceIndex = 0;
 
     [Header("Tree Settings")]
+    [SerializeField] private List<GameObject> springTrees;
     [SerializeField] private List<GameObject> summerTrees;
     [SerializeField] private List<GameObject> autumnTrees;
     [SerializeField] private List<GameObject> winterTrees;
 
+    [Header("季节控制对象")]
+    [SerializeField] private List<GameObject> springObjects;
+    [SerializeField] private List<GameObject> summerObjects;
+    [SerializeField] private List<GameObject> autumnObjects;
+    [SerializeField] private List<GameObject> winterObjects;
+
+
+    [Header("花朵设置")]
+    [SerializeField] private List<GameObject> flowerPrefabs;
+    [SerializeField, Range(0f, 1f)] public float flowerSpawnChance = 0.3f;
+    [SerializeField] private int flowersPerCluster = 6;
+    [SerializeField] private float flowerClusterRadius = 0.3f;
+
     [Range(0f, 1f)] public float treeSpawnChance = 0.3f;
-    public enum Season { Summer, Autumn, Winter }
+    public enum Season { Spring, Summer, Autumn, Winter }
     public Season currentSeason = Season.Summer;
 
     [Header("Path Settings")]
     public GameObject stonePathPrefab;
 
     private Transform fenceParent;
-    private const int gridOffset = 10;
+    [Header("外围空地设置")]
+    [SerializeField] private int gridOffset = 10;
+
 
     void Start()
     {
         GenerateGraveyard();
+    }
+
+    public void SpawnFlowersOnPlane(Transform plane, int clusterCount = 2, int flowersPerCluster = 5, float clusterRadius = 0.3f)
+    {
+        if (flowerPrefabs == null || flowerPrefabs.Count == 0) return;
+
+        for (int i = 0; i < clusterCount; i++)
+        {
+            Vector3 basePos = plane.position + new Vector3(
+                Random.Range(-0.4f, 0.4f),
+                0f,
+                Random.Range(-0.4f, 0.4f)
+            );
+
+            for (int j = 0; j < flowersPerCluster; j++)
+            {
+                GameObject prefab = flowerPrefabs[Random.Range(0, flowerPrefabs.Count)];
+                Vector2 offset = Random.insideUnitCircle * clusterRadius;
+                Vector3 flowerPos = basePos + new Vector3(offset.x, 0f, offset.y);
+                flowerPos.y = 0.01f;
+
+                GameObject flower = Instantiate(prefab, flowerPos, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f));
+                // 不设置父级，保持在墓园根节点下
+                flower.transform.SetParent(this.transform); // 或不设置父级
+
+
+                float scale = Random.Range(0.02f, 0.04f);
+                flower.transform.localScale = new Vector3(scale, scale, scale);
+            }
+        }
     }
 
     public void GenerateGraveyard()
@@ -57,6 +103,18 @@ public class GraveyardGenerator : MonoBehaviour
                 plane.transform.localScale = new Vector3(0.1f, 1f, 0.1f);
                 plane.isStatic = true;
 
+                // 随机生成部分 Plane 上的花丛
+                if (flowerPrefabs != null && flowerPrefabs.Count > 0 && Random.value < flowerSpawnChance)
+                {
+                    SpawnFlowersOnPlane(plane.transform, 2, flowersPerCluster, flowerClusterRadius);
+                }
+
+                bool isInsideFence =
+                    (x > gridOffset && x < width + gridOffset - 1 &&
+                     z > gridOffset && z < height + gridOffset - 1);
+
+                plane.layer = isInsideFence ? LayerMask.NameToLayer("NavOuter") : LayerMask.NameToLayer("NavOuter");
+
                 bool isFenceArea =
                     (x >= gridOffset && x <= width + gridOffset - 1 &&
                      z >= gridOffset && z <= height + gridOffset - 1) &&
@@ -64,9 +122,7 @@ public class GraveyardGenerator : MonoBehaviour
                      z == gridOffset || z == height + gridOffset - 1);
 
                 if (isFenceArea)
-                {
                     GenerateFenceAt(x, z, pos, plane.transform);
-                }
             }
         }
 
@@ -89,7 +145,34 @@ public class GraveyardGenerator : MonoBehaviour
         }
 
         GenerateSpawnAndExitPoints();
-        BuildNavMeshSurface();
+        BuildNavMeshSurfaces();
+    }
+
+    private void BuildNavMeshSurfaces()
+    {
+        Vector3 centerPos = GetWorldPos(gridOffset + width / 2, gridOffset + height / 2);
+
+        GameObject ghostSurfaceObj = new GameObject("GhostNavMeshSurface");
+        ghostSurfaceObj.transform.position = centerPos;
+        ghostSurfaceObj.transform.SetParent(transform);
+
+        NavMeshSurface ghostSurface = ghostSurfaceObj.AddComponent<NavMeshSurface>();
+        ghostSurface.collectObjects = CollectObjects.All;
+        ghostSurface.layerMask = LayerMask.GetMask("NavInner");
+        ghostSurface.defaultArea = 3; // GhostArea
+        ghostSurface.BuildNavMesh();
+
+        GameObject visitorSurfaceObj = new GameObject("VisitorNavMeshSurface");
+        visitorSurfaceObj.transform.position = centerPos;
+        visitorSurfaceObj.transform.SetParent(transform);
+
+        NavMeshSurface visitorSurface = visitorSurfaceObj.AddComponent<NavMeshSurface>();
+        visitorSurface.collectObjects = CollectObjects.All;
+        visitorSurface.layerMask = LayerMask.GetMask("NavInner", "NavOuter");
+        visitorSurface.defaultArea = 0; // Walkable
+        visitorSurface.BuildNavMesh();
+
+        Debug.Log("[NavMesh] GhostNav + VisitorNav 烘焙完成");
     }
 
     private void GenerateFenceAt(int x, int z, Vector3 pos, Transform parentPlane)
@@ -234,15 +317,35 @@ public class GraveyardGenerator : MonoBehaviour
         }
     }
 
+    public void ApplySeasonObjects()
+    {
+        void SetGroupActive(List<GameObject> list, bool active)
+        {
+            if (list == null) return;
+            foreach (var go in list)
+            {
+                if (go != null) go.SetActive(active);
+            }
+        }
+
+        SetGroupActive(springObjects, currentSeason == Season.Spring);
+        SetGroupActive(summerObjects, currentSeason == Season.Summer);
+        SetGroupActive(autumnObjects, currentSeason == Season.Autumn);
+        SetGroupActive(winterObjects, currentSeason == Season.Winter);
+    }
+
+
     private GameObject GetRandomTree()
     {
         List<GameObject> treeList = null;
         switch (currentSeason)
         {
+            case Season.Spring: treeList = springTrees; break;
             case Season.Summer: treeList = summerTrees; break;
             case Season.Autumn: treeList = autumnTrees; break;
             case Season.Winter: treeList = winterTrees; break;
         }
+
 
         if (treeList == null || treeList.Count == 0)
         {
@@ -281,24 +384,38 @@ public class GraveyardGenerator : MonoBehaviour
         selectedFenceIndex = index;
         GenerateGraveyard();
     }
+    public void SetSeasonToSpring()
+    {
+        currentSeason = Season.Spring;
+        ApplySeasonDensity();        //
+        ApplySeasonObjects();
+        GenerateGraveyard();
+    }
 
     public void SetSeasonToSummer()
     {
         currentSeason = Season.Summer;
+        ApplySeasonDensity();
+        ApplySeasonObjects();
         GenerateGraveyard();
     }
 
     public void SetSeasonToAutumn()
     {
         currentSeason = Season.Autumn;
+        ApplySeasonDensity();
+        ApplySeasonObjects();
         GenerateGraveyard();
     }
 
     public void SetSeasonToWinter()
     {
         currentSeason = Season.Winter;
+        ApplySeasonDensity();
+        ApplySeasonObjects();
         GenerateGraveyard();
     }
+
 
     private void GenerateSpawnAndExitPoints()
     {
@@ -328,4 +445,52 @@ public class GraveyardGenerator : MonoBehaviour
 
         Debug.Log("[NavMesh] Build 完成后 NavMesh Triangles Count: " + NavMesh.CalculateTriangulation().indices.Length);
     }
+
+    public Rect GetGraveyardBounds()
+    {
+        float minX = (gridOffset + 1) * spacing;
+        float maxX = (gridOffset + width - 2) * spacing;
+
+        float minZ = (gridOffset + 1) * spacing;
+        float maxZ = (gridOffset + height - 2) * spacing;
+
+        float widthInWorld = maxX - minX;
+        float heightInWorld = maxZ - minZ;
+
+        return new Rect(minX, minZ, widthInWorld, heightInWorld);
+    }
+
+    public void ApplySeasonDensity()
+    {
+        switch (currentSeason)
+        {
+            case Season.Spring:
+                flowerSpawnChance = 0.23f; // 花朵很多
+                treeSpawnChance = 0.5f;   // 树木少
+                break;
+
+            case Season.Summer:
+                flowerSpawnChance = 0.12f; // 花朵少
+                treeSpawnChance = 0.7f;   // 树木多
+                break;
+
+            case Season.Autumn:
+                flowerSpawnChance = 0.08f; // 花少
+                treeSpawnChance = 0.5f;   // 树也偏少
+                break;
+
+            case Season.Winter:
+                flowerSpawnChance = 0.0f; // 没有花
+                treeSpawnChance = 0.6f;   // 树很稀疏
+                break;
+        }
+
+        Debug.Log($"[Season] 当前季节：{currentSeason}，花密度={flowerSpawnChance}，树密度={treeSpawnChance}");
+    }
+    public void SetFlowerSpawnChance(float value)
+    {
+        flowerSpawnChance = Mathf.Clamp(value, 0f, 0.23f);
+    }
+
+
 }

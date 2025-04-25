@@ -57,6 +57,17 @@ public class GraveData : MonoBehaviour
         }
     }
 
+    public void ClearOfferings()
+    {
+        foreach (var item in offerings)
+        {
+            if (item != null)
+                Destroy(item);
+        }
+        offerings.Clear();
+    }
+
+
 #if UNITY_EDITOR
     void OnDrawGizmosSelected()
     {

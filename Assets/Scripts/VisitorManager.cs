@@ -2,36 +2,38 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.AI;
-using static Unity.VisualScripting.Antlr3.Runtime.Tree.TreeWizard;
 
 [System.Serializable]
 public class VisitorType
 {
-    public GameObject prefab;              // 访客预制体（外观 + 动作）
-    public float speed = 3.5f;             // 行走速度
-    public GameObject offeringPrefab;      // 祭拜供品
-    public float weight = 1f;              // 出现概率权重
+    public GameObject prefab;
+    public float speed = 3.5f;
+    public GameObject offeringPrefab;
+    public float weight = 1f;
 }
 
 public class VisitorManager : MonoBehaviour
 {
     [Header("访客设置")]
-    public List<VisitorType> visitorTypes; // 多种访客配置
-    public float spawnDelay = 5f;          // 生成间隔时间
-    public int maxVisitors = 3;            // 同时最多访客数量
+    public List<VisitorType> visitorTypes;
+    public float spawnDelay = 5f;
+    public int maxVisitors = 3;
 
     private Transform spawnPoint;
     private Transform exitPoint;
     private List<GameObject> activeVisitors = new List<GameObject>();
 
-    void Start()
+    private Coroutine spawnCoroutine;
+    private bool isSpawning = false;
+
+    void Awake()
     {
-        StartCoroutine(WaitAndStart());
+        StartCoroutine(WaitAndCachePoints());
     }
 
-    IEnumerator WaitAndStart()
+    IEnumerator WaitAndCachePoints()
     {
-        yield return new WaitForSeconds(0.2f); // 等待 0.2 秒让墓园先生成
+        yield return new WaitForSeconds(0.2f);
 
         GameObject spawn = GameObject.Find("SpawnPoint");
         GameObject exit = GameObject.Find("ExitPoint");
@@ -44,21 +46,49 @@ public class VisitorManager : MonoBehaviour
 
         spawnPoint = spawn.transform;
         exitPoint = exit.transform;
-
-        StartCoroutine(SpawnVisitorLoop());
     }
 
+    public void StartDay()
+    {
+        if (isSpawning) return;
+
+        isSpawning = true;
+        spawnCoroutine = StartCoroutine(SpawnVisitorLoop());
+        Debug.Log("[VisitorManager] 白天开始，访客生成启动");
+    }
+
+    public void EndDay()
+    {
+        if (!isSpawning) return;
+
+        isSpawning = false;
+
+        if (spawnCoroutine != null)
+        {
+            StopCoroutine(spawnCoroutine);
+            spawnCoroutine = null;
+        }
+
+        Debug.Log("[VisitorManager] 白天结束，访客生成停止");
+    }
 
     IEnumerator SpawnVisitorLoop()
     {
-        while (true)
+        while (isSpawning)
         {
-            // 清理死亡的访客
             activeVisitors.RemoveAll(v => v == null);
 
             if (activeVisitors.Count < maxVisitors)
             {
                 VisitorType type = GetRandomVisitorType();
+                if (type == null)
+                {
+                    Debug.LogWarning("未能获取有效访客类型，跳过本轮生成");
+                    yield return new WaitForSeconds(spawnDelay);
+                    continue;
+                }
+
+
                 GameObject newVisitor = Instantiate(type.prefab, spawnPoint.position, Quaternion.identity);
                 newVisitor.transform.rotation = Quaternion.LookRotation(-spawnPoint.forward);
                 activeVisitors.Add(newVisitor);
@@ -82,6 +112,22 @@ public class VisitorManager : MonoBehaviour
         }
     }
 
+    public void RefreshPoints()
+    {
+        GameObject spawn = GameObject.Find("SpawnPoint");
+        GameObject exit = GameObject.Find("ExitPoint");
+
+        if (spawn == null || exit == null)
+        {
+            Debug.LogError("[VisitorManager] 找不到 SpawnPoint 或 ExitPoint，请检查墓园生成！");
+            return;
+        }
+
+        spawnPoint = spawn.transform;
+        exitPoint = exit.transform;
+    }
+
+
     VisitorType GetRandomVisitorType()
     {
         if (visitorTypes == null || visitorTypes.Count == 0)
@@ -104,6 +150,22 @@ public class VisitorManager : MonoBehaviour
                 return v;
         }
 
-        return visitorTypes[0]; // fallback
+        return visitorTypes[0];
     }
+
+    // VisitorManager.cs 添加这个
+    public void ForceAllVisitorsToExit()
+    {
+        GameObject[] visitors = GameObject.FindGameObjectsWithTag("Visitor");
+        foreach (var visitor in visitors)
+        {
+            DayVisitorAgent agent = visitor.GetComponent<DayVisitorAgent>();
+            if (agent != null)
+            {
+                agent.GoToExitImmediately();
+            }
+        }
+    }
+
+
 }

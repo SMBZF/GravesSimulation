@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 [System.Serializable]
 public class GraveSet
@@ -29,6 +30,7 @@ public class GraveyardContentGenerator : MonoBehaviour
     private int internalEndZ;
     private float spacing = 1f;
     private int pathX;
+    private int offset; // 新增
 
     public void SetupRange(int width, int height, float spacing, int offset, int pathX)
     {
@@ -38,6 +40,7 @@ public class GraveyardContentGenerator : MonoBehaviour
         internalEndZ = offset + height - 2;
         this.spacing = spacing;
         this.pathX = pathX;
+        this.offset = offset; // 保存 offset
 
         Debug.Log($"[SetupRange] Set internal range: X({internalStartX}-{internalEndX}) Z({internalStartZ}-{internalEndZ})");
     }
@@ -51,14 +54,13 @@ public class GraveyardContentGenerator : MonoBehaviour
 
         for (int z = internalStartZ; z <= internalEndZ; z++)
         {
-            // 特殊排：Z 最小那一排
             if (z == internalStartZ)
             {
                 for (int x = internalStartX; x <= internalEndX; x++)
                 {
                     if (x == pathX) continue;
 
-                    Vector3 pos = new Vector3((x - 10) * spacing, 0f, (z - 10) * spacing);
+                    Vector3 pos = new Vector3((x - offset) * spacing, 0f, (z - offset) * spacing);
 
                     if (x % 2 == 0)
                     {
@@ -78,21 +80,25 @@ public class GraveyardContentGenerator : MonoBehaviour
                                     GameObject ts = Instantiate(tombstone, offsetPos, Quaternion.identity, transform);
                                     ts.name = $"SpecialTombstone_{x}_{z}";
                                     ts.tag = "Grave";
-                                    // 添加 GraveData 并设置 prefab 名称
+
                                     GraveData gd = ts.GetComponent<GraveData>();
                                     if (gd == null)
                                         gd = ts.AddComponent<GraveData>();
                                     gd.gravePrefabName = tombstone.name;
 
                                     if (gd.gravePrefabName == "gravestone-broken" || gd.gravePrefabName == "gravestone-debris")
-                                    {
                                         gd.offeringChance = 0.3f;
-                                    }
                                     else if (gd.gravePrefabName == "shovel-dirt")
-                                    {
                                         gd.allowOffering = false;
-                                    }
 
+                                    if (!ts.TryGetComponent<NavMeshObstacle>(out _))
+                                    {
+                                        var obs = ts.AddComponent<NavMeshObstacle>();
+                                        obs.carving = true;
+                                        obs.shape = NavMeshObstacleShape.Box;
+                                        obs.size = new Vector3(0.1f, 0.5f, 0.1f);
+                                        obs.center = new Vector3(0f, 0.5f, 0f);
+                                    }
                                 }
                             }
                         }
@@ -112,7 +118,6 @@ public class GraveyardContentGenerator : MonoBehaviour
                 continue;
             }
 
-            // 普通区域：奇数 Z 行交错墓碑
             if (z % 2 == 0) continue;
 
             for (int x = internalStartX; x <= internalEndX; x++)
@@ -120,7 +125,7 @@ public class GraveyardContentGenerator : MonoBehaviour
                 if (x == pathX) continue;
                 if ((x + z) % 2 != 0) continue;
 
-                Vector3 pos = new Vector3((x - 10) * spacing, 0f, (z - 10) * spacing);
+                Vector3 pos = new Vector3((x - offset) * spacing, 0f, (z - offset) * spacing);
                 GraveSet set = GetWeightedRandom(normalGraveSets, normalGraveSetWeights);
                 if (set != null && set.graveBasePrefab != null)
                 {
@@ -137,19 +142,24 @@ public class GraveyardContentGenerator : MonoBehaviour
                             GameObject ts = Instantiate(tombstone, offsetPos, Quaternion.identity, transform);
                             ts.name = $"Tombstone_{x}_{z}";
                             ts.tag = "Grave";
-                            // 添加 GraveData 并设置 prefab 名称
+
                             GraveData gd = ts.GetComponent<GraveData>();
                             if (gd == null)
                                 gd = ts.AddComponent<GraveData>();
                             gd.gravePrefabName = tombstone.name;
 
                             if (gd.gravePrefabName == "gravestone-broken" || gd.gravePrefabName == "gravestone-debris")
-                            {
                                 gd.offeringChance = 0.3f;
-                            }
                             else if (gd.gravePrefabName == "shovel-dirt")
-                            {
                                 gd.allowOffering = false;
+
+                            if (!ts.TryGetComponent<NavMeshObstacle>(out _))
+                            {
+                                var obs = ts.AddComponent<NavMeshObstacle>();
+                                obs.carving = true;
+                                obs.shape = NavMeshObstacleShape.Box;
+                                obs.size = new Vector3(0.1f, 0.5f, 0.1f);
+                                obs.center = new Vector3(0f, 0.5f, 0f);
                             }
                         }
                     }

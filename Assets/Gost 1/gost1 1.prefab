@@ -43,7 +43,7 @@ GameObject:
   - component: {fileID: 1519234069056082255}
   - component: {fileID: 5453946946678127002}
   - component: {fileID: 3603583980037797807}
-  - component: {fileID: 3353377735123110293}
+  - component: {fileID: 7510247777614800799}
   m_Layer: 0
   m_Name: pasted__pasted__pSphere1_group4
   m_TagString: Untagged
@@ -116,7 +116,7 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!95 &3353377735123110293
+--- !u!95 &7510247777614800799
 Animator:
   serializedVersion: 5
   m_ObjectHideFlags: 0
@@ -126,7 +126,7 @@ Animator:
   m_GameObject: {fileID: 5369753689315554157}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 566e9ee5581db2a42bacf4b944b8c307, type: 2}
+  m_Controller: {fileID: 9100000, guid: 5ea455865bbe6d04289136da21332174, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0

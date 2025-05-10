@@ -43,7 +43,7 @@ GameObject:
   - component: {fileID: 6808944387446433941}
   - component: {fileID: 4778959337319277170}
   - component: {fileID: 3419604646607737845}
-  - component: {fileID: 9059893190635711094}
+  - component: {fileID: 3150456150123795309}
   m_Layer: 0
   m_Name: group11_pasted__polySurface2pSphere1
   m_TagString: Untagged
@@ -116,7 +116,7 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!95 &9059893190635711094
+--- !u!95 &3150456150123795309
 Animator:
   serializedVersion: 5
   m_ObjectHideFlags: 0
@@ -126,7 +126,7 @@ Animator:
   m_GameObject: {fileID: 6483428370651264789}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 566e9ee5581db2a42bacf4b944b8c307, type: 2}
+  m_Controller: {fileID: 9100000, guid: d496c051c12a4e445b566dd37873b630, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0

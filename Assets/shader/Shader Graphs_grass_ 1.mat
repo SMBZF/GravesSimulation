@@ -57,17 +57,17 @@ Material:
     - _appear: -0.01
     - _edge: 0.9
     - _neibuPower: 1.46
-    - _scale: 0.03
+    - _scale: 0.04
     - _smmooth: 0
-    - _speed: 1.5
+    - _speed: 4
     - _strength: 0.5
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 0}
     - _Color_1: {r: 0.21804906, g: 0.6603774, b: 0.31037107, a: 1}
     - _DeepColor_2: {r: 0.18823533, g: 0.34089515, b: 0.49803922, a: 0.62352943}
-    - _WaibuColor_1: {r: 0.14189038, g: 1.178307, b: 0.6872586, a: 1}
-    - _neibuColor: {r: 0.41194963, g: 1, b: 0.81638217, a: 0.7647059}
-    - _shallowColor_1: {r: 0.1843137, g: 0.7529412, b: 0.6466558, a: 0.67058825}
+    - _WaibuColor_1: {r: 0.14189038, g: 0.6151814, b: 1.178307, a: 1}
+    - _neibuColor: {r: 0.41176474, g: 0.5144631, b: 1, a: 0.7647059}
+    - _shallowColor_1: {r: 0.1843137, g: 0.5011807, b: 0.7529412, a: 0.67058825}
   m_BuildTextureStacks: []
 --- !u!114 &8972254063016776602
 MonoBehaviour:

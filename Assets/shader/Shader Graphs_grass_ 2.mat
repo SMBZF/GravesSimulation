@@ -57,9 +57,9 @@ Material:
     - _appear: -0.01
     - _edge: 0.9
     - _neibuPower: 1.46
-    - _scale: 0.03
+    - _scale: 0.05
     - _smmooth: 0
-    - _speed: 1.5
+    - _speed: 3
     - _strength: 0.5
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 0}

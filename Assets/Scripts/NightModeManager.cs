@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 public class NightModeManager : MonoBehaviour
@@ -11,12 +12,27 @@ public class NightModeManager : MonoBehaviour
     public GraveyardGenerator graveyardGenerator;
 
     [Header("字幕 UI 预制体")]
-    public GameObject dialogCanvasPrefab; // 拖入 GhostDialogCanvas.prefab
+    public GameObject dialogCanvasPrefab;
 
     public void StartNight()
     {
-        Debug.Log("[NightMode] 夜晚开始，开始判断哪些墓碑生成幽灵");
+        Debug.Log("[NightMode] 夜晚开始，等待访客离开...");
+        StartCoroutine(WaitForVisitorsThenSpawnGhosts());
+    }
 
+    private IEnumerator WaitForVisitorsThenSpawnGhosts()
+    {
+        while (GameObject.FindGameObjectsWithTag("Visitor").Length > 0)
+        {
+            yield return new WaitForSeconds(0.5f); // 每0.5秒检测一次
+        }
+
+        Debug.Log("[NightMode] 所有访客已离开，开始生成幽灵");
+        SpawnGhosts();
+    }
+
+    private void SpawnGhosts()
+    {
         if (ghostPrefabs == null || ghostPrefabs.Count == 0)
         {
             Debug.LogError("未设置任何幽灵预制体，请在 Inspector 中配置 ghostPrefabs");
@@ -57,7 +73,6 @@ public class NightModeManager : MonoBehaviour
                     gc.SetTargetGrave(grave);
                     gc.SetWanderBounds(bounds);
 
-                    // 动态生成一个 Canvas，作为幽灵的子物体（便于管理）
                     GameObject dialog = Instantiate(dialogCanvasPrefab, ghost.transform);
                     FollowAndFaceCamera follower = dialog.GetComponent<FollowAndFaceCamera>();
                     if (follower != null)
@@ -67,7 +82,7 @@ public class NightModeManager : MonoBehaviour
                     }
                     else
                     {
-                        Debug.LogWarning($"生成的字幕 Canvas 缺少 FollowAndFaceCamera 脚本！");
+                        Debug.LogWarning("生成的字幕 Canvas 缺少 FollowAndFaceCamera 脚本！");
                     }
                 }
 

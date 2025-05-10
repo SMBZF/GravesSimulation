@@ -63,6 +63,13 @@ public class GhostController : MonoBehaviour
         if (cachedRenderer != null)
             ghostMaterial = cachedRenderer.material;
 
+        if (ghostMaterial != null && ghostMaterial.HasProperty("_appear"))
+        {
+            ghostMaterial.SetFloat("_appear", appearEnd); // 生成时设置成 0.8（完全显现）
+            StartCoroutine(FadeInOnSpawn());
+        }
+
+
         audioSource = GetComponent<AudioSource>();
         agent = GetComponent<NavMeshAgent>();
         if (agent != null)
@@ -75,6 +82,7 @@ public class GhostController : MonoBehaviour
         wanderCenter = originGrave;
         StartCoroutine(StateMachine());
     }
+
 
     void LateUpdate()
     {
@@ -179,7 +187,7 @@ public class GhostController : MonoBehaviour
 
                     if (targetGrave != null)
                     {
-                        ShowDialog(GetRandomLine(offeringLines));
+                        ShowDialog(GetOfferingDialog());
                         targetGrave.ClearOfferings();
                     }
 
@@ -374,4 +382,76 @@ public class GhostController : MonoBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * turnSpeed);
         }
     }
+
+    IEnumerator FadeInOnSpawn()
+    {
+        float t = 0f;
+        float duration = fadeDuration;
+
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            float appearValue = Mathf.Lerp(appearEnd, appearStart, t / duration); // 反过来，从 appearEnd 到 appearStart
+
+            if (ghostMaterial.HasProperty("_appear"))
+                ghostMaterial.SetFloat("_appear", appearValue);
+
+            yield return null;
+        }
+
+        if (ghostMaterial.HasProperty("_appear"))
+            ghostMaterial.SetFloat("_appear", appearStart); // 最后确保停在 -0.01
+    }
+
+    private string GetOfferingDialog()
+    {
+        if (targetGrave == null) return GetRandomLine(offeringLines);
+
+        List<string> offeringNames = new List<string>();
+        foreach (var offering in targetGrave.offerings)
+        {
+            if (offering != null)
+            {
+                string cleanName = offering.name.Replace("(Clone)", "").Trim();
+                offeringNames.Add(cleanName);
+            }
+        }
+
+        GhostCodexManager codex = FindObjectOfType<GhostCodexManager>();
+
+        // ship-small 和 wine-white
+        if (offeringNames.Contains("ship-small") && offeringNames.Contains("wine-white"))
+        {
+            codex?.UnlockCaption();
+            return "I was once a captain... lost at sea.";
+        }
+
+        // wine-white 和 cupcake
+        if (offeringNames.Contains("wine-white") && offeringNames.Contains("cupcake"))
+        {
+            codex?.UnlockGlutton();
+            return "No more food! Do you want me to die twice?";
+        }
+
+        // 两个及以上 apple
+        int appleCount = offeringNames.FindAll(name => name == "apple").Count;
+        if (appleCount >= 2)
+        {
+            codex?.UnlockSnowWhite();
+            return "Poisoned apples...? My wicked stepmother still haunts me!";
+        }
+
+        // 两个及以上 candle-multiple
+        int candleCount = offeringNames.FindAll(name => name == "candle-multiple").Count;
+        if (candleCount >= 3)
+        {
+            codex?.UnlockOrdinary();
+            return "Plain candles for a plain life... and death.";
+        }
+
+        // 其它情况，走正常随机
+        return GetRandomLine(offeringLines);
+    }
+
+
 }

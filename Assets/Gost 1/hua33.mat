@@ -54,8 +54,8 @@ Material:
     - _QueueOffset: 0
     - _Scale: 0
     - _Smoothness: 0.1
-    - _speed: 3.12
-    - _windscale: 0.03
+    - _speed: 4
+    - _windscale: 0.013
     m_Colors:
     - _Base_Color: {r: 0.836478, g: 0.836478, b: 0.836478, a: 0}
     - _Emission_Color: {r: 1, g: 0.9785008, b: 0.87735844, a: 0.5176471}

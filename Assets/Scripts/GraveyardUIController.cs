@@ -16,7 +16,7 @@ public class GraveyardUIController : MonoBehaviour
     public Dropdown seasonDropdown;
     public Button resetButton;
     public Button startButton;
-    public Button backToSetupButton; // ✅ 新增：返回按钮
+    public Button backToSetupButton;
     public Slider dayNightSlider;
 
     [Header("Panels")]
@@ -49,7 +49,7 @@ public class GraveyardUIController : MonoBehaviour
             startButton.onClick.AddListener(OnStartGameClicked);
 
         if (backToSetupButton != null)
-            backToSetupButton.onClick.AddListener(OnBackToSetupClicked); // ✅ 新增绑定返回按钮
+            backToSetupButton.onClick.AddListener(OnBackToSetupClicked);
 
         if (flowerDensitySlider != null)
         {
@@ -63,6 +63,8 @@ public class GraveyardUIController : MonoBehaviour
             dayNightSlider.value = dayNightController.timeValue;
             dayNightSlider.onValueChanged.AddListener(OnDayNightValueChanged);
         }
+
+        UpdateFlowerSliderVisibility(); // 初始检查一次
     }
 
     void Update()
@@ -134,7 +136,16 @@ public class GraveyardUIController : MonoBehaviour
             case 3: generator.SetSeasonToWinter(); break;
         }
 
+        UpdateFlowerSliderVisibility(); // 根据季节显示/隐藏
         visitorManager?.RefreshPoints();
+    }
+
+    void UpdateFlowerSliderVisibility()
+    {
+        if (flowerDensitySlider != null)
+        {
+            flowerDensitySlider.gameObject.SetActive(seasonDropdown.value != 3); // 只有冬天隐藏
+        }
     }
 
     void OnResetClicked()
@@ -174,12 +185,12 @@ public class GraveyardUIController : MonoBehaviour
             dayNightController.timeValue = dayNightController.dayStart - 0.005f;
         }
 
-
         if (visitorManager != null)
         {
             visitorManager.EndDay();
-            visitorManager.ForceAllVisitorsToExit(); // 这里强制访客去出口
+            visitorManager.ForceAllVisitorsToExit(); // 如果有，强制访客离开
         }
+
         ClearAllGhosts();
 
         if (dayNightSlider != null && dayNightController != null)
